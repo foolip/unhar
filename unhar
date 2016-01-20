@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+
+import gzip
+import json
+import os
+import sys
+
+def unhar(path):
+    openfunc = gzip.open if path.endswith('.gz') else open
+    with openfunc(path, mode='rt', encoding='utf-8', errors='ignore') as f:
+        data = json.load(f, strict=False)
+
+    basepath = path
+    while True:
+        base, ext = os.path.splitext(basepath)
+        if ext in ['.har', '.gz']:
+            basepath = base
+        else:
+            break
+
+    pageurl = None
+    for (index, entry) in enumerate(data['log']['entries']):
+        url = entry['request']['url']
+        if index == 0:
+            pageurl = url
+
+        try:
+            text = entry['response']['content']['text']
+        except:
+            continue
+
+        mimetype = entry['response']['content']['mimeType']
+
+        outpath = '%s.%d.txt' % (basepath, index)
+        with open(outpath, mode='wt', encoding='utf-8', errors='ignore') as f:
+            f.write('Page: %s\n' % pageurl)
+            f.write('Resource: %s\n' % url)
+            f.write('Content-Type: %s\n' % mimetype)
+            f.write('\n')
+            f.write(text)
+
+if __name__ == '__main__':
+    for path in sys.argv[1:]:
+        try:
+            unhar(path)
+        except:
+            print('Failed to extract ' + path)
