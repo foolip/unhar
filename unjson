@@ -6,14 +6,11 @@ import json
 import os
 import sys
 
-def unjson(path):
-    with open(path, mode='rt', encoding='utf-8') as f:
-        data = json.load(f)
+def write(data, outpath):
     page = data['page']
     url = data['url']
     body = data['body']
 
-    outpath = os.path.splitext(path)[0] + '.txt'
     with open(outpath, mode='wt', encoding='utf-8') as f:
             f.write('page: %s\n' % page)
             f.write('url: %s\n' % url)
@@ -22,7 +19,17 @@ def unjson(path):
 
 if __name__ == '__main__':
     for path in sys.argv[1:]:
+        f = open(path, mode='rt', encoding='utf-8')
+        outbase = os.path.splitext(path)[0]
         try:
-            unjson(path)
+            # first try to parse the whole file as JSON
+            data = json.load(f)
+            write(data, outbase + '.txt')
         except:
-            print('Failed to extract ' + path)
+            # otherwise try to split by lines
+            f.seek(0)
+            linedata = [json.loads(data) for data in f.readlines()]
+            width = len(str(len(linedata)))
+            for line, data in enumerate(linedata):
+                number = str(line + 1).rjust(width, '0')
+                write(data, outbase + '.' + number + '.txt')
