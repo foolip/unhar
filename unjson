@@ -12,10 +12,11 @@ def write(data, outpath):
     body = data['body']
 
     with open(outpath, mode='wt', encoding='utf-8') as f:
+            f.write(body)
+            f.write('\n<!--\n')
             f.write('page: %s\n' % page)
             f.write('url: %s\n' % url)
-            f.write('\n')
-            f.write(body)
+            f.write('-->\n')
 
 if __name__ == '__main__':
     for path in sys.argv[1:]:
