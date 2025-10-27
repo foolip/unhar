@@ -2,41 +2,39 @@
 #
 # Unpacks a raw httparchive har file into one file per resource.
 
+import base64
 import gzip
 import json
 import os
 import sys
+
+from urllib.parse import urlparse
 
 def unhar(path):
     openfunc = gzip.open if path.endswith('.gz') else open
     with openfunc(path, mode='rt', encoding='utf-8', errors='ignore') as f:
         data = json.load(f, strict=False)
 
-    basepath = path
-    while True:
-        base, ext = os.path.splitext(basepath)
-        if ext in ['.har', '.gz']:
-            basepath = base
+    for entry in data['log']['entries']:
+        url = urlparse(entry['request']['url'])
+
+        content = entry['response']['content']['text']
+        encoding = entry['response']['content']['encoding']
+        if encoding == 'base64':
+            content = base64.b64decode(content)
         else:
-            break
+            content = content.encode('utf-8')
 
-    page = None
-    for (index, entry) in enumerate(data['log']['entries']):
-        url = entry['request']['url']
-        if index == 0:
-            page = url
+        outpath = os.path.join(url.hostname, url.path[1:])
 
-        try:
-            text = entry['response']['content']['text']
-        except:
+        if os.path.exists(outpath):
+            print(f'{outpath} already exists, not overwriting')
             continue
 
-        outpath = '%s.%d.txt' % (basepath, index)
-        with open(outpath, mode='wt', encoding='utf-8', errors='ignore') as f:
-            f.write('page: %s\n' % page)
-            f.write('url: %s\n' % url)
-            f.write('\n')
-            f.write(text)
+        print(f'Extracting {outpath}')
+        os.makedirs(os.path.dirname(outpath), exist_ok=True)
+        with open(outpath, mode='wb') as f:
+            f.write(content)
 
 if __name__ == '__main__':
     for path in sys.argv[1:]:
